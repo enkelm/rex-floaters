@@ -20,7 +20,11 @@ rex = {
     new_layer = function(value) popup = value; return { block_ids = { "block:popup" } } end,
   },
 }
-dofile(file)
+package.path = file .. ";" .. package.path
+local extension = require("rex-lazygit")
+assert(action == nil and binding == nil, "Requiring Lazygit must not register anything before setup")
+assert(require("rex-lazygit") == extension, "Require must return the cached module")
+assert(extension.setup() == extension, "setup must return the module")
 assert(binding[1] == "cmd+shift+g" and binding[2] == action.name)
 local ctx = { session_id = "session:test", block_id = "block:caller" }
 assert(action.run(ctx).block_ids[1] == "block:popup")

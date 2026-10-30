@@ -55,7 +55,9 @@ rex = {
   },
 }
 local function press(id) return action.run({ session_id = "session:test", block_id = id }) end
-dofile(file)
+package.path = file .. ";" .. package.path
+local extension = require("rex-lazygit")
+extension.setup()
 local first = press("block:one").block_ids[1]
 assert(#popups(windows[1]) == 1)
 press(first)
@@ -69,7 +71,7 @@ windows[1].layers[#windows[1].layers + 1] = { kind = "floating", blocks = {
 } }
 local _, shared = find(reopened)
 shared.blocks[#shared.blocks + 1] = { block_id = "block:sibling", label = "Shell", flavor = "com.superlogical.terminal.shell" }
-dofile(file) -- Discovery must use live placement, not a cache lost on reload.
+extension.setup() -- Cached-module setup must discover existing placement after reload.
 unreadable = true
 press("block:one")
 assert(#popups(windows[1]) == 0 and #popups(windows[2]) == 1, "Toggling one window closed another's popup")

@@ -11,7 +11,9 @@ LuaJIT 2.1.1792588164, Python 3.15.2, and ShellCheck 0.11.0. These are tested ve
   Node traps also confirm shortcuts and picker execution do not invoke it.
 - A clean Git clone with spaces in its path passed all 14 Lua cases and checks from `/tmp`, without
   resolving any module through the source checkout or the Hunk repository.
-- Config fixtures check both chunk naming conventions, window-scoped toggling after reload,
+- Config fixtures verify inert `require("rex-lazygit")`, explicit `setup()`, both chunk naming
+  conventions, and cached-module setup while popups are open. Integration uses this same module
+  interface through a named symlink. Other contracts include window-scoped toggling after reload,
   preservation of unrelated/tiled panes, placement, and guarded focus/zoom restoration.
 - Real Rex servers and Python PTYs check umbrella selection/cancellation, exact selected paths,
   direct launch from main/linked/nested/single-repository/worktree-only locations, error visibility

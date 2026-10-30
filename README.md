@@ -62,19 +62,23 @@ and `FZF_DEFAULT_OPTS_FILE` are ignored so custom bindings cannot change selecti
 Clone into a fresh destination; substitute a supplied URL or local source checkout:
 
 ```sh
-extension="${XDG_CONFIG_HOME:-$HOME/.config}/rex/extensions/rex-lazygit"
+extension="${XDG_CONFIG_HOME:-$HOME/.config}/rex/rex-lazygit"
 git clone --branch v0.1.0 /path/to/rex-lazygit "$extension"
 ```
 
 Append to your **existing** Rex `init.lua` (or the file named by `REX_CONFIG`), without replacing it:
 
 ```lua
-local config = os.getenv("XDG_CONFIG_HOME") or os.getenv("HOME") .. "/.config"
-dofile(config .. "/rex/extensions/rex-lazygit/init.lua")
+require("rex-lazygit").setup()
 ```
 
-An absolute path to this checkout's `init.lua` also works. Keep the complete checkout in place:
-launchers and libraries resolve relative to it. Do not load the former Hunk-bundled Lazygit copy too.
+Rex resolves the module from its config directory, just like `rex-worktrunk`. A development checkout
+can be symlinked to the path above. Custom module locations can use
+`package.path = "/path/to/modules/?/init.lua;" .. package.path` before requiring it. Keep the complete checkout in place: launchers
+and libraries resolve relative to it. Do not also load the former Hunk-bundled copy.
+
+Requiring the module is inert. `setup()` registers its action and default shortcut and returns the
+module. Repeated setup after config reload preserves discovery/toggling of an already-open popup.
 
 Then run:
 
@@ -94,8 +98,8 @@ rex do lazygit_open -s "$REX_SESSION" -b "$REX_BLOCK"
 ## Update or uninstall
 
 Inspect local changes before fetching and checking out a new release tag; do not reset a modified
-checkout. Check and reload Rex after updating. To uninstall, close the popup, remove the `dofile`
-line, reload Rex, then remove the checkout. Your Lazygit config and Git repositories remain untouched.
+checkout. Check and reload Rex after updating. To uninstall, close the popup, remove the
+`require("rex-lazygit").setup()` line, reload Rex, then remove the checkout. Your Lazygit config and Git repositories remain untouched.
 
 ## Validation
 
