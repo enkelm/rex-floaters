@@ -1,0 +1,13 @@
+{
+  "name": "rex-lazygit",
+  "version": "0.1.0",
+  "description": "A floating Lazygit toggle and umbrella repository picker for Rex",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "sh scripts/test.sh",
+    "test:unit": "sh scripts/test.sh --unit",
+    "check": "sh scripts/check.sh"
+  }
+}

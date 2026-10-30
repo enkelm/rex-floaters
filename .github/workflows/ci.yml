@@ -1,0 +1,13 @@
+name: Checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  lua-config-and-lint:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install luajit shellcheck
+      - run: sh scripts/check.sh
+      - run: sh scripts/test.sh --unit
+      # Full Lua integration tests need a compatible Rex binary, fzf, and Python.
