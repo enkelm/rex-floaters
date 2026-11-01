@@ -31,7 +31,7 @@ local function popups(window)
 end
 local unreadable = false
 rex = {
-  action = function(value) action = value end, bind = function() end,
+  action = function(value) action = value end, bind = function() end, unbind = function() end,
   block = { call = function() assert(not unreadable, "Closing must not require a readable terminal process"); return { child = { cwd = "/tmp" } } end },
   call = function(method, args)
     assert(method == "block.close")

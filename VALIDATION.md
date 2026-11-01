@@ -1,9 +1,25 @@
-# v0.1.0 validation
+# Validation
+
+## v0.1.1 setup configuration
+
+Validated locally on 2026-11-01 with Rex `0.0.1793299046-g2307b7`. Version 0.1.1 adds setup options.
+The original `v0.1.0` tag is preserved.
+
+- New option assertions failed before implementation. Config fixtures now pass for custom/disabled
+  shortcuts, repeated setup, copied input, preserved unrelated keys, and validation before mutation.
+- The native popup case verifies the replacement chord in Rex's resolved keymap and the custom
+  bounds in the actual floating layout, then checks cancellation/focus restoration.
+- All **14 cases pass**, zero failures/skips; Lua/shell/Python syntax and lint checks also pass.
+- README Lua examples pass the installed Rex's `config check`; shell examples parse and local
+  documentation links resolve. Installation pins `v0.1.1`, with contributor instructions for
+  branching from the tagged checkout.
+
+## v0.1.0 release record
 
 Validated locally on 2026-10-30 with macOS 27.2, Rex `0.0.1793131181-gdd9a20`, fzf 0.74.5,
 LuaJIT 2.1.1792588164, Python 3.15.2, and ShellCheck 0.11.0. These are tested versions, not minimums.
 
-## Results
+### Results
 
 - **14 Lua tests pass, zero failures or skips.** There is no Node test runner or JavaScript runtime
   in this repository. Config fixtures use LuaJIT; integration assertions use Rex's embedded Lua.
@@ -28,7 +44,7 @@ removed. Git/fzf helpers are included locally, so none of these tests resolves t
 or the dotfiles implementation. The Lazygit executable is a synthetic terminal fixture in integration
 tests; no user Git repository or Lazygit configuration is changed.
 
-## Reproduce
+### Reproduce
 
 ```sh
 sh scripts/check.sh
@@ -40,7 +56,7 @@ The entry point starts a disposable runner server; tests start only isolated ser
 repositories, and synthetic PTYs. They never reload or stop the user's server. Python is a test-only
 PTY transport, not part of the plugin runtime. No Node, npm, or Lua packages are required.
 
-## Limits
+### Limits
 
 Hosted CI is configured but has not run remotely. Full integration tests require Rex/fzf on an
 already provisioned macOS host. Minimum versions, Linux, native Windows, mixed-version remote clients,

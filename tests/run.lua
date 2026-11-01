@@ -55,10 +55,22 @@ H.test("launch failure stays visible until acknowledged, then preserves exit sta
 end)
 H.test("configured floating action cancels and restores the invoking view without Node",function(t)
   local f=H.fixture(t,"lazygit"); local before=f:view()
+  H.write(f.env.REX_CONFIG,H.read(f.env.REX_CONFIG)..'require("rex-lazygit").setup{bindings={open="alt+g"},bounds={0.1,0.2,0.7,0.6}}\n')
+  f:call({"config","reload"})
+  local found=0
+  for _,binding in ipairs(f:json({"api","call","client.keymap","{}"}).bindings) do
+    if binding.action=="lazygit_open" then H.equal(binding.keys,{"alt+g"}); found=found+1 end
+  end
+  H.equal(found,1,"The real keymap must contain only the configured Lazygit chord")
   local created=f:json({"split","-s",f.env.REX_SESSION,"-b",f.env.REX_BLOCK,"-c",f.workspace,"--shell=none","--json","--","/bin/sh","-c","while :; do sleep 60; done"})
   local origin=created.block_ids[1]; f:call({"do","lazygit_open","-s",f.env.REX_SESSION,"-b",origin})
   local popup=H.wait(function() for _,b in ipairs(f:blocks()) do if b.label=="Lazygit" then return b.block_id end end end,"No Lazygit popup")
   H.wait(function() return f:capture(popup):find("Lazygit · Choose a worktree",1,true) end,"Picker did not start")
+  local geometry=false
+  for _,layer in ipairs(f:view().windows[1].layers) do
+    if layer.layout and layer.layout.block_id==popup then H.equal(layer.layout.rect,{0.1,0.2,0.7,0.6}); geometry=true end
+  end
+  assert(geometry,"The actual floating popup must use configured bounds")
   f:call({"send-key","-s",f.env.REX_SESSION,"-b",popup,"escape"})
   H.wait(function() for _,b in ipairs(f:blocks()) do if b.block_id==popup then return false end end; return true end,"Popup did not close")
   local after=f:view(); H.equal(after.windows[1].focused_block_id,origin); H.equal(#after.windows[1].layers,#before.windows[1].layers); f:no_node()

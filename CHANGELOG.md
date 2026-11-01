@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 - 2026-11-01
+
+- Accept one optional setup table with `bindings.open`, shortcut disabling, and popup `bounds`.
+- Reject invalid options before registration and replace old shortcuts on reconfiguration.
+- Verify custom bindings in the actual Rex keymap and bounds in the actual floating layout.
+- Reorganize the README around installation, configuration, usage, troubleshooting, and contributing.
+
 ## 0.1.0
 
 - Extract the floating Lazygit toggle into an independent MIT-licensed Rex extension.

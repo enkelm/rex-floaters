@@ -6,9 +6,10 @@ local function checked(result, err)
   if result == nil then error(err or "Rex call failed.", 0) end
   return result
 end
+local Config = dofile(directory .. "lib/config.lua")
 local M = {}
 
-function M.setup()
+local function register(config)
   rex.action{
     name = "lazygit_open", title = "Lazygit: Toggle Floating Window", category = "Git",
     keywords = "lg lazygit git repository floating popup",
@@ -43,7 +44,7 @@ function M.setup()
           local cwd = process.foreground and process.foreground.cwd or process.child and process.child.cwd
           if not cwd then error("Rex cannot determine this terminal's directory. Focus a running local terminal.", 0) end
           return checked(rex.session.new_layer{
-            window_id = window_id, bounds = { 0.05, 0.05, 0.9, 0.9 }, focus = true,
+            window_id = window_id, bounds = config.bounds, focus = true,
             layout = rex.layout.block{
               flavor = "com.superlogical.terminal.shell", label = "Lazygit",
               options = {
@@ -58,7 +59,10 @@ function M.setup()
       error("The invoking window closed before Lazygit opened.", 0)
     end,
   }
-  rex.bind("cmd+shift+g", "lazygit_open")
+end
+
+function M.setup(options)
+  Config.apply(options, register)
   return M
 end
 

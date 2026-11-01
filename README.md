@@ -1,119 +1,267 @@
 # Floating Lazygit for Rex
 
-Standalone **v0.1.0**, licensed under [MIT](LICENSE). No Hunk, Pluck, Pi, or Node dependency.
+**v0.1.1** · [MIT](LICENSE)
 
-Press **Cmd+Shift+G**, or choose **Lazygit: Toggle Floating Window** in Rex's command palette.
-Each Rex window has at most one floating Lazygit: press once to open it, and press again to close it,
-even from another pane in the same window. Other windows have independent popups. The toggle
-finds live popups after a config reload too; it does not rely on an in-memory list.
+Press **Cmd+Shift+G** to open Lazygit over your current Rex tab. Press it again to close the popup.
+Your tiled panes stay where they are. No Hunk, Pluck, Pi, or Node dependency.
 
-Lazygit opens in a centered floating terminal over the invoking pane's window, using that
-terminal's foreground working directory (including a Git worktree or repository subdirectory).
-The tiled panes are not split or resized. This calls `lazygit`, the executable behind `lg`.
-The shortcut closes the popup directly, rather than typing a key into a potentially open Lazygit dialog.
-The floating-terminal label `Lazygit` is reserved for this extension; tiled terminals are never toggled.
+[Install](#install) · [Configure](#configure) · [Use](#use) · [Troubleshoot](#troubleshoot) · [Develop](#develop)
 
-### Repository and worktree picker
+## Install
 
-Inside a Git checkout or any subdirectory of it, Lazygit opens immediately in the invoking directory.
-This applies even when the repository has several worktrees: use **Lazygit's own worktree controls**
-to switch between them.
+You need Rex, Git, fzf, `lazygit`, and the POSIX tools `sh`, `realpath`, `openssl`, and `uuidgen` on
+the Rex server's machine. Worktrunk is optional. The extension uses Rex's embedded Lua, so there
+is no build step, `npm install`, or separate Lua interpreter to install for normal use.
 
-The fzf picker appears only when launched outside a checkout, from an **umbrella directory containing
-multiple distinct repositories**. It uses an fzf picker in single-selection mode. Rows show
-`repository / branch`, clean/modified status, and the full checkout path.
-
-- **Up/Down** moves between worktrees.
-- Type to filter by repository, branch, or path. **Space** toggles; **Tab/Shift+Tab** toggles and moves.
-  Selecting another row replaces the previous selection. **Enter** opens Lazygit there.
-- **Ctrl+Space** inserts a search space; **Ctrl+X** clears the selection.
-- **Esc** cancels and closes the popup. The toggle shortcut closes the picker too.
-- Multiple worktrees of one repository count as **one repository**, not multiple choices requiring a picker.
-  If an umbrella contains only that repository, Lazygit opens its main checkout under the umbrella,
-  or another checkout there if the main checkout is elsewhere.
-
-Umbrella discovery includes repositories below the starting directory and their registered linked
-worktrees, even outside it. Discovery is bounded to three levels and 1,500 directories, skipping
-dependency/build folders. When Worktrunk is installed, the picker uses its local-only JSON worktree listing, matching
-the upstream Worktrunk extension. Missing Worktrunk, failed commands, and unsupported output fall back
-to Git. Worktrunk's creation/switching actions remain separate: this picker does not create, switch,
-fetch, or modify worktrees. The picker and Lazygit use the same floating terminal, so selection never
-creates a second popup.
-
-Quit Lazygit with **q** to close the popup too—there is no shell prompt left behind.
-The previous focus and zoom are restored unless you have moved to another pane or tab,
-or the original pane has closed. A failed launch keeps its error visible until you press Enter.
-This uses your existing Lazygit configuration and runs on the Rex server's machine.
-
-## Setup
-
-Requires Rex, Git, fzf, `lazygit`, a POSIX shell, and macOS command-line tools including `realpath`,
-`openssl`, and `uuidgen`. Worktrunk is optional. Git discovery and picker helpers ship in `lib/`;
-there is no dependency on another extension or repository. Both the shortcut and terminal workflow
-use Rex's embedded Lua through `rex do`: no Node, LuaJIT, or separate Lua interpreter starts on a shortcut.
-
-Tested on macOS 27.2 with Rex `0.0.1793131181-gdd9a20` and fzf 0.74.5. These are tested versions,
-not minimum requirements. Linux, native Windows, and mixed-version remote clients are not yet validated.
-Popups use your login shell's PATH. The launcher does not load nvm or resolve Node; `REX_LAZYGIT_NODE`
-is retired. `REX_HUNK_REX` names an explicit Rex executable and `REX_BIN_DIR` prepends a PATH directory.
-The shared picker respects `REX_HUNK_FZF` as an explicit fzf executable; inherited `FZF_DEFAULT_OPTS`
-and `FZF_DEFAULT_OPTS_FILE` are ignored so custom bindings cannot change selection behavior or output.
-
-Clone into a fresh destination; substitute a supplied URL or local source checkout:
+It is tested on macOS; Linux, native Windows, and mixed-version remote clients are not yet validated.
+On macOS with Homebrew, install the Git tools with:
 
 ```sh
-extension="${XDG_CONFIG_HOME:-$HOME/.config}/rex/rex-lazygit"
-git clone --branch v0.1.0 /path/to/rex-lazygit "$extension"
+brew install git fzf lazygit
 ```
 
-Append to your **existing** Rex `init.lua` (or the file named by `REX_CONFIG`), without replacing it:
+Rex must already be installed. The extension runs the `lazygit` executable, not an interactive `lg`
+alias, and uses your existing Lazygit configuration.
+
+### 1. Clone the extension
+
+Replace `REPOSITORY_URL` with this repository's Git clone URL. These instructions install
+**v0.1.1**, including configurable setup.
+
+```sh
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/rex"
+mkdir -p "$config_dir"
+git clone --branch v0.1.1 REPOSITORY_URL "$config_dir/rex-lazygit"
+```
+
+Git may print a "detached HEAD" notice because this pins a release tag. That is normal.
+The destination must not already exist. For an existing installation, see
+[Update or uninstall](#update-or-uninstall). Keep the whole checkout, including `lib/` and the launchers.
+
+### 2. Add it to Rex
+
+Append this to your existing Rex config, normally `~/.config/rex/init.lua`
+(or `$XDG_CONFIG_HOME/rex/init.lua` if you use XDG paths). **Do not replace your other configuration.**
 
 ```lua
-require("rex-lazygit").setup()
+require("rex-lazygit").setup{}
 ```
 
-Rex resolves the module from its config directory, just like `rex-worktrunk`. A development checkout
-can be symlinked to the path above. Custom module locations can use
-`package.path = "/path/to/modules/?/init.lua;" .. package.path` before requiring it. Keep the complete checkout in place: launchers
-and libraries resolve relative to it. Do not also load the former Hunk-bundled copy.
+If you select a different config file with `REX_CONFIG`, place the `rex-lazygit` checkout next to
+that file instead. Rex must be able to find `rex-lazygit/init.lua` through its module search path.
+Do not also load the older Hunk-bundled Lazygit module.
 
-Requiring the module is inert. `setup()` registers its action and default shortcut and returns the
-module. Repeated setup after config reload preserves discovery/toggling of an already-open popup.
-
-Then run:
+### 3. Check and reload
 
 ```sh
 rex config check
 rex config reload
 ```
 
-To use another shortcut, call `rex.unbind("cmd+shift+g")` followed by
-`rex.bind("your-chord", "lazygit_open")` after loading the module.
-The same action can be invoked explicitly from a Rex terminal:
+Focus a terminal in a Git checkout and press **Cmd+Shift+G**, or choose
+**Lazygit: Toggle Floating Window** from Rex's command palette. No server restart is needed.
+
+## Configure
+
+`setup` accepts one optional table. This is the complete configuration with default values:
+
+```lua
+require("rex-lazygit").setup{
+  bindings = {
+    open = "cmd+shift+g",
+  },
+  bounds = { 0.05, 0.05, 0.9, 0.9 },
+}
+```
+
+Use this in place of the minimal setup call, not in addition to it. Despite the name `open`, this
+binding both opens and closes the popup.
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `bindings.open` | `"cmd+shift+g"` | Toggle this tab's Lazygit popup. Set to `false` to leave the action unbound. |
+| `bindings` | See above | Set the whole field to `false` to register the action without shortcuts. |
+| `bounds` | `{ 0.05, 0.05, 0.9, 0.9 }` | `{ x, y, width, height }`, as fractions of the Rex window. |
+
+For a different shortcut and a smaller popup:
+
+```lua
+require("rex-lazygit").setup{
+  bindings = { open = "ctrl+shift+g" },
+  bounds = { 0.1, 0.15, 0.8, 0.7 },
+}
+```
+
+That places the popup 10% from the left and 15% from the top, at 80% width and 70% height.
+Bounds must be exactly four finite numbers. Width and height must be positive, and the entire
+rectangle must fit inside `0..1`. New bounds apply the next time a popup is created.
+
+For palette-only use:
+
+```lua
+require("rex-lazygit").setup{ bindings = false }
+```
+
+You can then manage shortcuts yourself with `rex.bind("ctrl+shift+g", "lazygit_open")` after setup.
+The same toggle is available from a Rex terminal:
 
 ```sh
 rex do lazygit_open -s "$REX_SESSION" -b "$REX_BLOCK"
 ```
 
-## Update or uninstall
+`setup()` and `setup{}` use defaults. Omitted fields also use defaults; another setup call starts
+from defaults rather than patching the previous call. Your table is copied, and reconfiguration
+removes the extension's old chords without clearing unrelated keys. Unknown options and invalid
+values are rejected before registration. Key strings use Rex's key-chord syntax.
 
-Inspect local changes before fetching and checking out a new release tag; do not reset a modified
-checkout. Check and reload Rex after updating. To uninstall, close the popup, remove the
-`require("rex-lazygit").setup()` line, reload Rex, then remove the checkout. Your Lazygit config and Git repositories remain untouched.
+Importing alone does nothing. `setup` registers the action and bindings, returns the module, and
+can run again after a config reload. The toggle still finds an already-open popup after reload.
 
-## Validation
+## Use
 
-Tests and assertions are Lua, run in Rex's embedded Lua. Development tools are Rex, Git, fzf,
-LuaJIT (config fixtures/syntax), ShellCheck, and Python 3 (real PTY transport only). No Node, npm,
-or third-party Lua packages are needed.
+Focus the terminal whose working directory you want to use, then run the toggle. Each Rex tab
+(called a window in the API) has at most one floating Lazygit. The shortcut closes that popup even
+when invoked from another pane in the same tab; other tabs have independent popups.
+
+| Where you launch it | What happens |
+| --- | --- |
+| Inside a Git checkout, including a subdirectory or linked worktree | Lazygit opens immediately in that directory. |
+| Inside a repository that has multiple worktrees | Lazygit still opens immediately. Use Lazygit's own worktree controls to switch. |
+| Outside a checkout, in a parent directory containing several distinct repositories | An fzf picker lets you choose a checkout first. |
+| In a parent directory containing only one repository | Lazygit opens that repository's main checkout under the parent, or another checkout there if its main checkout is elsewhere. |
+
+The directory comes from the focused terminal's foreground process, falling back to its shell.
+The popup does not split or resize tiled panes. Quit Lazygit with **q**, or run the toggle again,
+to close it. The shortcut closes the popup directly, without typing into an open Lazygit dialog.
+
+When Lazygit exits, the previous focus and zoom are restored if you have not moved to another pane
+or tab and the original pane still exists. A failed launch keeps its error visible until Enter.
+The floating-terminal label `Lazygit` is reserved for this extension; tiled terminals are never toggled.
+
+### Repository picker keys
+
+Rows show `repository / branch`, clean/modified status, and the full checkout path. Selection is
+single-choice. The picker and Lazygit share one floating terminal; choosing a checkout does not
+create a second popup.
+
+| Key | Action |
+| --- | --- |
+| Up / Down | Move between rows. |
+| Type | Filter by repository, branch, or path. |
+| Space | Select or deselect the current row. Selecting another replaces the previous selection. |
+| Tab / Shift+Tab | Toggle selection and move. |
+| Enter | Open Lazygit in the chosen checkout. |
+| Ctrl+Space | Insert a space into the search. |
+| Ctrl+X | Clear selection. |
+| Esc or the toggle shortcut | Cancel and close the popup. |
+
+Several worktrees of one repository count as one repository, not several repositories requiring
+a picker. Discovery includes repositories below the starting directory and their registered linked
+worktrees, including those outside it. It stops after three levels or 1,500 directories and skips
+common dependency/build directories.
+
+When installed, Worktrunk supplies its local-only JSON worktree listing. Missing Worktrunk, command
+failures, and unsupported output fall back to Git. This extension does not create, switch, fetch,
+or modify worktrees during discovery. No Worktrunk extension needs to be installed.
+
+## Troubleshoot
+
+| Problem | What to check |
+| --- | --- |
+| `module rex-lazygit not found` | The whole checkout must be named `rex-lazygit` beside the active Rex config file. Check the path reported by `rex config check`, especially with `REX_CONFIG`. |
+| `lazygit` or `fzf` cannot be found | Install the executable on the Rex server's machine and make it available on the login-shell PATH. A shell alias is not enough. |
+| A setup option is ignored on an older checkout | Update to `v0.1.1` or later; `v0.1.0` predates setup options. |
+| No picker appears in a multi-worktree repository | This is intentional. The picker is only for multiple distinct repositories outside a checkout. |
+| The working directory cannot be determined | Focus a running terminal with a local foreground process, then try again. |
+| New bounds do not affect an open popup | Close it with the toggle and reopen. Bounds are applied when the popup is created. |
+
+For unusual installations, the launcher supports these existing environment overrides:
+
+| Variable | Purpose |
+| --- | --- |
+| `REX_BIN_DIR` | Prepend a directory containing Rex to the launcher's PATH. |
+| `REX_HUNK_REX` | Use an explicit Rex executable. The name is retained for compatibility; Hunk is not required. |
+| `REX_HUNK_FZF` | Use an explicit fzf executable, also with a compatibility name. |
+
+The picker ignores `FZF_DEFAULT_OPTS` and `FZF_DEFAULT_OPTS_FILE` so user fzf bindings cannot change
+its selection rules or output format. Lazygit's own configuration is unchanged.
+
+## Develop
+
+The installation is already a Git checkout. Create a branch before editing a pinned release:
 
 ```sh
-sh scripts/check.sh
-sh scripts/test.sh --unit  # config contracts only; no Rex installation needed
-sh scripts/test.sh         # disposable isolated Rex servers, Git repos, fzf, and PTYs
+cd "${XDG_CONFIG_HOME:-$HOME/.config}/rex/rex-lazygit"
+git switch -c my-change
 ```
 
-Scripts work from any caller directory and never reload or mutate your live Rex session. Tests
-retain the original toggle, placement, focus/zoom, direct-launch, umbrella selection, cancellation,
-error-acknowledgement, and Git/Worktrunk contracts. A Node trap verifies it is never launched.
-See [VALIDATION.md](VALIDATION.md) for release evidence and [NOTICE.md](NOTICE.md) for provenance.
+No build step is required. To contribute, fork this repository and push your branch to your fork,
+then open a pull request. To work elsewhere, replace the installed directory with a symlink to
+your checkout after moving the old one somewhere safe. Do not delete local edits. For other module
+locations, prepend `"/path/to/modules/?/init.lua;"` to `package.path` before requiring.
+
+### Tools and checks
+
+Development needs LuaJIT, ShellCheck, and Python 3 in addition to the runtime tools. Python only
+transports test PTYs; assertions are Lua. On macOS with Homebrew:
+
+```sh
+brew install luajit shellcheck python
+```
+
+From the checkout:
+
+```sh
+sh scripts/test.sh --unit  # LuaJIT config/toggle/restore checks; Rex is not needed
+sh scripts/check.sh        # Lua, shell/ShellCheck, and Python syntax
+sh scripts/test.sh         # full suite with real Rex servers, Git repos, fzf, and PTYs
+```
+
+Tests create disposable Rex servers, temporary repositories, and a synthetic Lazygit executable.
+They do not reload or stop your server, change your Lazygit configuration, or mutate your working
+repositories. A Node trap checks that runtime workflows never invoke Node. There are no npm or
+third-party Lua packages to install. Scripts also work from other directories and paths with spaces.
+
+### Where to change things
+
+| Files | Responsibility |
+| --- | --- |
+| `init.lua`, `lib/config.lua` | Public setup, bindings, popup geometry, and live-popup discovery/toggling. |
+| `launch.sh`, `cli.lua` | Launch lifecycle and choosing the checkout used by Lazygit. |
+| `dismiss.lua` | Guarded focus and zoom restoration. |
+| `lib/git.lua` | Repository/worktree discovery and optional Worktrunk integration. |
+| `lib/picker.lua`, `lib/util.lua` | fzf interaction, terminal/process helpers, and safe temporary state. |
+| `tests/` | Lua assertions, Git fixtures, and real Rex/PTY integration. |
+
+After edits, run `rex config check` and `rex config reload`, then close and reopen any existing popup.
+For a bug fix, add a regression that fails before the fix, then run the checks and full suite.
+Reports should include `rex version`, the OS, the directory layout that triggers the problem, and
+the exact error with private paths or other secrets redacted.
+
+See [VALIDATION.md](VALIDATION.md) for tested versions, results, and platform limits. Hosted CI covers
+config tests and lint, not full Rex integration, and has not yet been run remotely.
+
+## Update or uninstall
+
+Inspect local changes and save them before switching versions. Choose the desired release from
+[CHANGELOG.md](CHANGELOG.md), then fetch and check out its tag:
+
+```sh
+extension="${XDG_CONFIG_HOME:-$HOME/.config}/rex/rex-lazygit"
+git -C "$extension" status --short
+# Once your local changes are safely committed or stashed:
+git -C "$extension" fetch --tags origin
+git -C "$extension" switch --detach v0.1.1  # replace with the release you want
+rex config check
+rex config reload
+```
+
+Review [CHANGELOG.md](CHANGELOG.md) before updating. Never reset a modified checkout just to update it.
+Close and reopen any running popup to use the new launcher/runtime code.
+
+To uninstall, close the popup, remove its setup call from your Rex config, and reload Rex. You can
+then remove the checkout. Your Lazygit configuration and Git repositories are left untouched.
+
+## License
+
+[MIT](LICENSE). See [NOTICE.md](NOTICE.md) for provenance and third-party tools.

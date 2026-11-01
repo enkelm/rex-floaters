@@ -1,6 +1,6 @@
 {
   "name": "rex-lazygit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A floating Lazygit toggle and umbrella repository picker for Rex",
   "type": "module",
   "private": true,
