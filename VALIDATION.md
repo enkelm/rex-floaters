@@ -1,5 +1,52 @@
 # Validation
 
+## v0.2.0 Rex Floaters
+
+Validated locally on 2026-11-01 with the Rex Beta 1734 bundled server/CLI,
+`0.0.1793420730-g6d0d9a`, API revision 9. Capability discovery on a disposable server confirmed
+`session.set_layer_state`, including `normal`/`minimized`, targeted focus, and minimized layers
+remaining in `session.view`. The live user server was already on API revision 9 and was not restarted.
+
+- **23 integration/registration cases pass, zero failures/skips.** The real-server cases replace
+  the former mocked toggle/dismiss fixtures; registration validation retains a small LuaJIT fixture.
+- Directory discovery, inline named entries, actual keymaps and bounds, namespaced ownership,
+  independent entries/tabs, cached live-popup discovery after reload, and unchanged process IDs
+  across hide/show are covered. Old servers get an actionable API-revision error.
+- Native lifecycle checks cover current-pane focus history, initial zoom restoration, hidden
+  executor completion without activating an old tab, cancellation, unrelated tiled labels, and
+  a surviving sibling in a split floating layer.
+- Real PTYs cover single/multi-selection, cancellation, single-item fzf bypass, empty/malformed
+  collectors, Lua context/selection, shell positional arguments with quotes/newlines/shell syntax,
+  and nonzero exit statuses. Native fast-failure checks confirm dead terminals do not remain open.
+- Television 0.15.9 checks cover one row per tab, a right-side bounded composite of every tiled split,
+  palette and truecolor full-screen terminal snapshots, remembered-pane focus, cancellation, stale pane
+  handling, exclusion of owned floater terminals, and cross-session server focus.
+- Existing Lazygit repository/worktree discovery and optional Worktrunk schema/fallback cases
+  remain covered. Lazygit is now a normal collector/executor definition. The bundled btop definition
+  is exercised with a synthetic executable, missing fzf, and a failing Git trap: no selection arguments
+  or Git calls are introduced.
+- The new registration contract fails against the previous HEAD with `unknown setup option entries`.
+- `sh scripts/check.sh`, `sh scripts/test.sh --unit`, and the full suite pass in this checkout
+  and in a separate copy whose path contains spaces. All 13 README Lua/shell code blocks parse and
+  local documentation links resolve.
+
+Reproduce with a compatible Rex executable (the PATH binary may still be an older channel):
+
+```sh
+sh scripts/check.sh
+sh scripts/test.sh --unit
+REX_FLOATERS_REX=/absolute/path/to/api-9/rex sh scripts/test.sh
+```
+
+All integration servers, repositories, commands, and terminal output are disposable fixtures.
+No live user configuration is reloaded by the suite. Full hosted integration, Linux/native Windows,
+actual btop/Lazydocker/Memex rendering, successful originating-app cross-session handoff with Remote
+Control enabled, and mixed-version remote hosts have not been validated. The live app's disabled Remote
+Control setting was confirmed to refuse `client.perform` with Rex's documented 403 response. Setup supports reconfiguration,
+but removed palette actions require a full config reload to disappear; stale actions cannot run
+removed executors. Runtime errors close the popup rather than retaining an acknowledgement prompt.
+The records below describe prior releases, not the new configuration interface.
+
 ## v0.1.1 setup configuration
 
 Validated locally on 2026-11-01 with Rex `0.0.1793299046-g2307b7`. Version 0.1.1 adds setup options.

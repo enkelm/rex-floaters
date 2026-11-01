@@ -1,69 +1,83 @@
--- Lazygit runs in its own floating terminal, never inside the invoking shell/agent.
-local filename = debug.getinfo(1, "S").source
-if filename:sub(1, 1) == "@" then filename = filename:sub(2) end
-local directory = assert(filename:match("(.*/)"), "Load Lazygit from its init.lua file.")
+-- Importing is inert. setup registers terminal-backed floaters, never code in the invoking pane.
+local filename = debug.getinfo(1, "S").source:gsub("^@", "")
+local directory = assert(filename:match("(.*/)"), "Load rex-floaters from its init.lua file.")
+local Config = dofile(directory .. "lib/config.lua")
+local M, entries = {}, {}
 local function checked(result, err)
   if result == nil then error(err or "Rex call failed.", 0) end
   return result
 end
-local Config = dofile(directory .. "lib/config.lua")
-local M = {}
-
-local function register(config)
-  rex.action{
-    name = "lazygit_open", title = "Lazygit: Toggle Floating Window", category = "Git",
-    keywords = "lg lazygit git repository floating popup",
-    description = "Toggle one floating Lazygit per window. Choose a checkout when multiple worktrees are found.",
-    args = {},
-    run = function(ctx)
-      if not ctx.session_id or not ctx.block_id then error("Focus the intended terminal pane first.", 0) end
-      local placement = checked(rex.session.describe_block{ block_id = ctx.block_id })
-      local window_id = placement.block and placement.block.window_id
-      if not window_id then error("The invoking pane is not in a window. Focus a placed terminal first.", 0) end
-      local view = checked(rex.session.view{})
-      for _, window in ipairs(view.windows or {}) do
-        if window.window_id == window_id then
-          -- Discover live popups, so toggling still works after a config reload and from any pane.
-          -- Only the reserved Lazygit floating terminals belong to this toggle, never tiled panes.
-          local popups = {}
-          for _, layer in ipairs(window.layers or {}) do
-            if layer.kind == "floating" then
-              for _, block in ipairs(layer.blocks or {}) do
-                if block.label == "Lazygit" and block.flavor == "com.superlogical.terminal.shell" then
-                  popups[#popups + 1] = block.block_id
-                end
+local function run(name, ctx, close)
+  local entry = entries[name]
+  if not entry then error("rex-floaters: entry no longer configured: " .. name .. ". Reload Rex's config to remove its palette actions.", 0) end
+  if not ctx.session_id or not ctx.block_id then error("Focus the intended terminal pane first.", 0) end
+  local version = checked(rex.call("server.version"))
+  if (version.api_revision or 0) < 9 then
+    error("rex-floaters requires a Rex server with API revision 9 (session.set_layer_state). Upgrade/restart the server; updating the app alone is not enough.", 0)
+  end
+  local placement = checked(rex.session.describe_block{ block_id = ctx.block_id })
+  local window_id = placement.block and placement.block.window_id
+  if not window_id then error("The invoking pane is not in a window. Focus a placed terminal first.", 0) end
+  local view = checked(rex.session.view{})
+  for _, window in ipairs(view.windows or {}) do
+    if window.window_id == window_id then
+      for _, layer in ipairs(window.layers or {}) do
+        if layer.kind == "floating" then
+          for _, block in ipairs(layer.blocks or {}) do
+            if block.label == "rex-floaters:" .. name and block.flavor == "com.superlogical.terminal.shell" then
+              if close then
+                return checked(rex.call("block.close", { session_id = ctx.session_id, block_id = block.block_id }))
               end
+              local state = layer.state == "minimized" and "normal" or "minimized"
+              return checked(rex.call("session.set_layer_state", {
+                session_id = ctx.session_id, layer_id = layer.layer_id, state = state, focus = state == "normal",
+              }))
             end
           end
-          if #popups > 0 then
-            -- Also remove duplicates left by the old opener, without closing unrelated layer siblings.
-            for _, block_id in ipairs(popups) do checked(rex.call("block.close", { session_id = ctx.session_id, block_id = block_id })) end
-            return { closed_block_ids = popups }
-          end
-          local process = checked(rex.block.call("com.superlogical.terminal", "process", { block_id = ctx.block_id }))
-          local cwd = process.foreground and process.foreground.cwd or process.child and process.child.cwd
-          if not cwd then error("Rex cannot determine this terminal's directory. Focus a running local terminal.", 0) end
-          return checked(rex.session.new_layer{
-            window_id = window_id, bounds = config.bounds, focus = true,
-            layout = rex.layout.block{
-              flavor = "com.superlogical.terminal.shell", label = "Lazygit",
-              options = {
-                -- Rex's default login shell supplies PATH; lg is an interactive alias for lazygit.
-                command = { "/bin/sh", directory .. "launch.sh", window_id, window.focused_block_id or ctx.block_id, window.zoomed_block_id or "" },
-                cwd = cwd, exit = { on_completion = true, quick_exit_threshold_ms = 0 },
-              },
-            },
-          })
         end
       end
-      error("The invoking window closed before Lazygit opened.", 0)
-    end,
-  }
+      if close then return { closed = false } end
+      local process = checked(rex.block.call("com.superlogical.terminal", "process", { block_id = ctx.block_id }))
+      local cwd = process.foreground and process.foreground.cwd or process.child and process.child.cwd
+      if not cwd then error("Rex cannot determine this terminal's directory. Focus a running local terminal.", 0) end
+      local launch_entry = {}
+      for key, value in pairs(entry) do launch_entry[key] = value end
+      launch_entry.origin = { session_id = ctx.session_id, window_id = window_id, block_id = ctx.block_id,
+        client_id = placement.block.owner or ctx.client_id }
+      local args = checked(rex.json.encode({ entry = launch_entry, window = window_id,
+        focus = window.focused_block_id or ctx.block_id, zoom = window.zoomed_block_id or "" }))
+      return checked(rex.session.new_layer{
+        window_id = window_id, bounds = entry.bounds, focus = true,
+        layout = rex.layout.block{
+          flavor = "com.superlogical.terminal.shell", label = "rex-floaters:" .. name,
+          options = { command = { "/bin/sh", directory .. "launch.sh", args }, cwd = cwd,
+            exit = { on_completion = true, quick_exit_threshold_ms = 0 } },
+        },
+      })
+    end
+  end
+  error("The invoking window closed before the floater opened.", 0)
 end
-
+local function register(resolved)
+  entries = {}
+  for _, entry in ipairs(resolved) do entries[entry.name] = entry end
+  for _, entry in ipairs(resolved) do
+    local name = entry.name
+    for _, operation in ipairs({ "toggle", "close" }) do
+      local close = operation == "close"
+      rex.action{
+        name = "floaters_" .. name .. "_" .. operation,
+        title = entry.title .. (close and ": Close Floater" or ": Toggle Floater"),
+        category = entry.category or "Floaters", keywords = entry.keywords or (name .. " floating popup"),
+        description = close and "Terminate and close this tab's floater." or entry.description or
+          "Show or hide this tab's floater without restarting its process.", args = {},
+        run = function(ctx) return run(name, ctx, close) end,
+      }
+    end
+  end
+end
 function M.setup(options)
   Config.apply(options, register)
   return M
 end
-
 return M

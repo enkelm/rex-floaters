@@ -53,17 +53,20 @@ function H.finish()
   assert(H.failed==0,"Test failures")
 end
 function H.fixture(t,kind)
-  local rexbin,fzf=assert(H.which("rex"),"Rex is required"),assert(H.which("fzf"),"fzf is required")
+  local rexbin,fzf=assert(os.getenv("REX_FLOATERS_REX") or H.which("rex"),"Rex is required"),assert(H.which("fzf"),"fzf is required")
+  local tv=H.which("tv")
   local dir=H.command({"mktemp","-d","/tmp/rex-lua-suite.XXXXXXXX"}):gsub("%s+$", "")
   dir=H.command({"realpath",dir}):gsub("%s+$", "")
   local f={directory=dir,bin=dir.."/bin",root=dir.."/reviews",nodeLog=dir.."/node-called",kind=kind}
-  H.command({"mkdir","-p",f.bin,dir.."/sessions"})
-  H.command({"ln","-s",H.root,dir.."/rex-lazygit"})
-  local config=dir.."/init.lua"; H.write(config,"package.path = "..H.json(dir.."/?/init.lua;").." .. package.path\nrequire('rex-lazygit').setup()\n")
+  H.command({"mkdir","-p",f.bin,dir.."/sessions",dir.."/xdg/config",dir.."/xdg/data",dir.."/xdg/cache",dir.."/xdg/state"})
+  H.command({"ln","-s",H.root,dir.."/rex-floaters"})
+  local config=dir.."/init.lua"; H.write(config,"package.path = "..H.json(dir.."/?/init.lua;").." .. package.path\nrequire('rex-floaters').setup()\n")
   H.command({"ln","-s",rexbin,f.bin.."/rex"})
   H.write(f.bin.."/node","#!/bin/sh\nprintf 'unexpected node\\n' >> "..H.quote(f.nodeLog).."\nexit 86\n")
   H.command({"chmod","700",f.bin.."/node"})
-  f.env={PATH=f.bin..":/usr/bin:/bin:/usr/sbin:/sbin",REX_CONFIG=config,REX_SERVER="unix://"..dir.."/rex.sock",REX_SESSION="",REX_BLOCK="",REX_HUNK_REX=rexbin,REX_HUNK_FZF=fzf,REX_HUNK_STATE_DIR=f.root,REX_AGENT_DIR=dir.."/agents",REX_BIN_DIR=f.bin}
+  f.env={PATH=f.bin..":/usr/bin:/bin:/usr/sbin:/sbin",REX_CONFIG=config,REX_SERVER="unix://"..dir.."/rex.sock",REX_SESSION="",REX_BLOCK="",REX_FLOATERS_REX=rexbin,REX_FLOATERS_FZF=fzf,REX_FLOATERS_TV=tv,REX_HUNK_REX=rexbin,REX_HUNK_FZF=fzf,REX_HUNK_STATE_DIR=f.root,REX_AGENT_DIR=dir.."/agents",REX_BIN_DIR=f.bin,
+    XDG_CONFIG_HOME=dir.."/xdg/config",XDG_DATA_HOME=dir.."/xdg/data",XDG_CACHE_HOME=dir.."/xdg/cache",XDG_STATE_HOME=dir.."/xdg/state"}
+  f.tv=tv
   f.rex=rexbin
   local server=assert(rex.exec.start({rexbin,"server","run","--listen",f.env.REX_SERVER,"--state-dir",dir.."/server","--config",config},{env=f.env,stdout=false,stderr=false}))
   t:after(function() server:kill(); assert(server:wait(10)); H.command({"rm","-rf",dir}) end)

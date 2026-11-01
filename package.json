@@ -1,7 +1,7 @@
 {
-  "name": "rex-lazygit",
-  "version": "0.1.1",
-  "description": "A floating Lazygit toggle and umbrella repository picker for Rex",
+  "name": "rex-floaters",
+  "version": "0.2.0",
+  "description": "Named floating terminals with optional Lua collectors, configurable pickers, and script executors for Rex",
   "type": "module",
   "private": true,
   "license": "MIT",

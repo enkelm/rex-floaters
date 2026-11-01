@@ -1,6 +1,7 @@
 #!/bin/sh
-# The picker runs in Rex's embedded Lua and exits with Lazygit, without a shell prompt.
+# The popup's own Rex Lua runner survives hide/show and exits with its executor.
 set -eu
-if [ -n "${REX_BIN_DIR:-}" ]; then PATH="$REX_BIN_DIR:$PATH"; export PATH; fi
+BIN_DIR=${REX_FLOATERS_BIN_DIR:-${REX_BIN_DIR:-}}
+if [ -n "$BIN_DIR" ]; then PATH="$BIN_DIR:$PATH"; export PATH; fi
 HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
-exec "${REX_HUNK_REX:-rex}" --autostart=false 'do' "$HERE/cli.lua" "window=$1" "focus=$2" "zoom=$3"
+exec "${REX_FLOATERS_REX:-${REX_HUNK_REX:-rex}}" --autostart=false 'do' "$HERE/cli.lua" --args "$1"

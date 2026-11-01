@@ -6,11 +6,9 @@ if [ "${1:-}" = --unit ]; then
   for convention in rex lua; do
     luajit "$HERE/tests/config-fixture.lua" "$HERE/init.lua" "$convention"
   done
-  luajit "$HERE/tests/toggle-fixture.lua" "$HERE/init.lua"
-  luajit "$HERE/tests/dismiss-fixture.lua" "$HERE/dismiss.lua"
   exit
 fi
-REX=${REX_HUNK_REX:-rex}
+REX=${REX_FLOATERS_REX:-${REX_HUNK_REX:-rex}}
 TEMP=$(mktemp -d /tmp/rex-test-host.XXXXXXXX)
 ENDPOINT="unix://$TEMP/rex.sock"
 printf '%s\n' '-- Isolated test runner host.' > "$TEMP/init.lua"
