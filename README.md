@@ -9,57 +9,35 @@ Your tiled panes stay where they are. No Hunk, Pluck, Pi, or Node dependency.
 
 ## Install
 
-You need Rex, Git, fzf, `lazygit`, and the POSIX tools `sh`, `realpath`, `openssl`, and `uuidgen` on
-the Rex server's machine. Worktrunk is optional. The extension uses Rex's embedded Lua, so there
-is no build step, `npm install`, or separate Lua interpreter to install for normal use.
-
-It is tested on macOS; Linux, native Windows, and mixed-version remote clients are not yet validated.
-On macOS with Homebrew, install the Git tools with:
+You need Rex, Git, fzf, `lazygit`, and the standard tools `sh`, `realpath`, `openssl`, and `uuidgen`.
+Worktrunk is optional. On macOS, `brew install git fzf lazygit` installs the Git tools.
+Clone into Rex's configuration directory:
 
 ```sh
-brew install git fzf lazygit
+git clone https://github.com/enkelm/rex-lazygit ~/.config/rex/rex-lazygit
 ```
 
-Rex must already be installed. The extension runs the `lazygit` executable, not an interactive `lg`
-alias, and uses your existing Lazygit configuration.
-
-### 1. Clone the extension
-
-Replace `REPOSITORY_URL` with this repository's Git clone URL. These instructions install
-**v0.1.1**, including configurable setup.
-
-```sh
-config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/rex"
-mkdir -p "$config_dir"
-git clone --branch v0.1.1 REPOSITORY_URL "$config_dir/rex-lazygit"
-```
-
-Git may print a "detached HEAD" notice because this pins a release tag. That is normal.
-The destination must not already exist. For an existing installation, see
-[Update or uninstall](#update-or-uninstall). Keep the whole checkout, including `lib/` and the launchers.
-
-### 2. Add it to Rex
-
-Append this to your existing Rex config, normally `~/.config/rex/init.lua`
-(or `$XDG_CONFIG_HOME/rex/init.lua` if you use XDG paths). **Do not replace your other configuration.**
+Add to `~/.config/rex/init.lua`, keeping your existing configuration:
 
 ```lua
-require("rex-lazygit").setup{}
+require("rex-lazygit").setup{ bindings = { open = "cmd+shift+g" } }
 ```
 
-If you select a different config file with `REX_CONFIG`, place the `rex-lazygit` checkout next to
-that file instead. Rex must be able to find `rex-lazygit/init.lua` through its module search path.
-Do not also load the older Hunk-bundled Lazygit module.
-
-### 3. Check and reload
+Turn on **Remote Control** in **Rex → Settings → Rex Server**, then reload:
 
 ```sh
-rex config check
 rex config reload
 ```
 
-Focus a terminal in a Git checkout and press **Cmd+Shift+G**, or choose
-**Lazygit: Toggle Floating Window** from Rex's command palette. No server restart is needed.
+Rex loads modules from beside the `init.lua` it opens. If `init.lua` is a symlink, clone next to
+the link, not its target. With `XDG_CONFIG_HOME` or `REX_CONFIG`, use that config directory instead
+of `~/.config/rex`. The tools must be on the PATH your login shell sets on the Rex server's machine;
+an interactive `lg` alias is not enough.
+
+Press **Cmd+Shift+G** to toggle Lazygit, or choose **Lazygit: Toggle Floating Window** from the
+command palette. Any Rex key chord or sequence can be used; see [Configure](#configure).
+If it is already installed, [update it](#update-or-uninstall) instead of cloning over it.
+Do not also load the older Hunk-bundled Lazygit module.
 
 ## Configure
 
@@ -116,6 +94,13 @@ values are rejected before registration. Key strings use Rex's key-chord syntax.
 
 Importing alone does nothing. `setup` registers the action and bindings, returns the module, and
 can run again after a config reload. The toggle still finds an already-open popup after reload.
+
+For a key sequence like a tmux prefix, set `bindings.open = "ctrl+space>g"`. Bind the prefix pressed
+twice to send it to the terminal:
+
+```lua
+rex.bind("ctrl+space>ctrl+space", "pane.send_key", { key = "ctrl+space" })
+```
 
 ## Use
 
@@ -188,7 +173,7 @@ its selection rules or output format. Lazygit's own configuration is unchanged.
 
 ## Develop
 
-The installation is already a Git checkout. Create a branch before editing a pinned release:
+The installation is already a Git checkout. Create a branch before editing:
 
 ```sh
 cd "${XDG_CONFIG_HOME:-$HOME/.config}/rex/rex-lazygit"
@@ -238,6 +223,8 @@ For a bug fix, add a regression that fails before the fix, then run the checks a
 Reports should include `rex version`, the OS, the directory layout that triggers the problem, and
 the exact error with private paths or other secrets redacted.
 
+The extension uses Rex's embedded Lua, with no Node, npm, or separate Lua runtime dependency.
+It is tested on macOS; Linux, native Windows, and mixed-version remote clients are not yet validated.
 See [VALIDATION.md](VALIDATION.md) for tested versions, results, and platform limits. Hosted CI covers
 config tests and lint, not full Rex integration, and has not yet been run remotely.
 
