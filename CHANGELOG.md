@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Bundle Pluck on `cmd+shift+y` to copy hinted tokens from visible panes, using the normal floater lifecycle.
+- Group Pluck's capture and token code under `collect/`, and its UI and clipboard code under `executor/`; keep `execute.lua` as the entry point.
+- Speed up fresh Pluck launches without caching: walk tokens alongside screen cells, handle ASCII
+  directly, lay out only the visible tail, and use native string scans for VT cleanup. Avoid duplicate
+  token decoding and nested path rescans.
+- Add an opt-in cold-start benchmark with fresh Rex/Lua processes and complete-frame timing.
+- Add a `zoom` definition option for full-tab floaters and expose the original pane, zoom, and server identity to scripts.
+- Include Pluck's snapshot, Unicode, and real-PTY coverage; exclude minimized floaters from captures.
+- Keep the README focused on setup and use, with separate configuration and Pluck guides.
+
 ## 0.2.0 - 2026-11-01
 
 - Rename the extension and module to `rex-floaters`; replace `bindings.open` with named definitions.

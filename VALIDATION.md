@@ -1,5 +1,73 @@
 # Validation
 
+## Unreleased: bundled Pluck
+
+Validated locally on macOS with Rex `0.0.1793420730-g6d0d9a`, API revision 9.
+
+- **43 cases pass, zero failures/skips**, including the existing Lazygit, btop, and Television cases.
+  Pluck uses the shared Floaters launcher and cleanup, not its former standalone setup or launcher.
+- Native Pluck coverage checks the default shortcut, automatic full-tab zoom, hide/show with the same
+  process, config reload, cancellation, original focus/zoom restoration, and unchanged source output
+  and terminal size. A pre-zoomed source excludes its hidden neighbor.
+- Real PTYs verify exact OSC 52 clipboard bytes, UTF-8 tokens, large viewports, cancellation, ignored
+  paste, multi-letter hints, Backspace, resize/clipping, tiny terminals, paged captures, split/floating
+  composition, other-tab exclusion, and rejection of a mismatched server. The tests intercept OSC 52
+  instead of writing a user's clipboard.
+- All 766 official Unicode 17 grapheme vectors run, along with token, snapshot, and visibility checks.
+  A visibility regression confirms minimized floaters neither supply tokens nor hide visible sources;
+  the standalone planner reproduces the incorrect minimized-overlay capture.
+- `sh scripts/test.sh --unit` and `sh scripts/check.sh` pass. The unit command includes Pluck without
+  requiring Rex. Unicode data, vectors, their license, and the optional regeneration script are local.
+- The checks and full suite also pass from `/tmp` against a separate copy in a path containing spaces,
+  with no sibling rex-pluck checkout. Documentation links resolve and Lua/shell examples parse.
+
+### Cold-start performance
+
+`sh scripts/test.sh --bench-pluck` measures the shipping launcher through the first complete PTY
+frame. Every sample starts a new Rex/Lua process; it doesn't reuse an open picker, preloaded modules,
+or cached captures. Three samples per case produce these local medians:
+
+| Source viewport | Before | After |
+| --- | --- | --- |
+| 120×40 ASCII | 425 ms | 197 ms |
+| 240×80 ASCII | 1,416 ms | 392 ms |
+| 240×80 mixed Unicode | 1,418 ms | 400 ms |
+| 240×80 mixed Unicode + 1,000 history rows | 4,713 ms | 489 ms |
+
+The same benchmark fails its 750 ms budget against a separate copy with the unoptimized renderer,
+snapshot parser, and token scanner, and passes all four cases after optimization. Its target-count
+check prevents a faster result from silently dropping unique copy targets. Fixture setup is outside
+the timed interval; launcher/process startup and the PTY transport are included.
+
+Profiling identified repeated Unicode work and a renderer that searched every token for every cell,
+not slow Rex capture calls. The renderer now walks ordered tokens once. ASCII takes direct paths
+through segmentation, width measurement, and wrapping, including ASCII pairs inside mixed text.
+Snapshot layout walks backward from the latest screen instead of wrapping old history. VT cleanup
+uses native string scans and byte patterns rather than decoding every character in the capture.
+The token scanner decodes each line once for paths and filenames and rejects nested path starts
+before rescanning their tails. No result cache or prewarming was added.
+
+All 43 ordinary cases, the 766 Unicode vectors, unit checks, and syntax/lint checks still pass.
+A deterministic comparison of 3,000 mixed ASCII/Unicode/control and arbitrary-byte inputs also
+matches the original sanitization, grapheme, width, wrapping, full/partial-screen, and token results.
+Timing checks remain opt-in for provisioned hosts.
+
+Validation uses only disposable servers and synthetic panes; it doesn't edit the sibling rex-pluck
+checkout or live user configuration. Actual client clipboard writes, unusual fonts, Linux, native
+Windows, and mixed-version remote clients have not been validated.
+
+### Push-readiness recheck
+
+Rechecked on macOS with Rex `0.0.1793632279-ge7974b`, API revision 10:
+
+- Syntax/lint checks, all 11 standalone unit cases, and all 43 full-suite cases pass with zero
+  failures or skips, including the 766 Unicode grapheme vectors.
+- Checks, unit tests, and the full suite also pass from `/tmp` against an independent copy in a
+  path containing spaces, without a sibling rex-pluck checkout.
+- All local links in the README, guides, and notice resolve; 14 Lua and 6 shell examples parse.
+- Fresh-process benchmark medians are 193 ms (120×40 ASCII), 320 ms (240×80 ASCII), 381 ms
+  (240×80 mixed Unicode), and 474 ms (mixed Unicode plus history), all below the 750 ms budget.
+
 ## v0.2.0 Rex Floaters
 
 Validated locally on 2026-11-01 with the Rex Beta 1734 bundled server/CLI,

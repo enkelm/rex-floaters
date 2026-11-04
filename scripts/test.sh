@@ -6,8 +6,11 @@ if [ "${1:-}" = --unit ]; then
   for convention in rex lua; do
     luajit "$HERE/tests/config-fixture.lua" "$HERE/init.lua" "$convention"
   done
+  luajit "$HERE/tests/pluck/unit.lua"
   exit
 fi
+TARGET="$HERE/tests/run.lua"
+if [ "${1:-}" = --bench-pluck ]; then TARGET="$HERE/tests/pluck/benchmark.lua"; fi
 REX=${REX_FLOATERS_REX:-${REX_HUNK_REX:-rex}}
 TEMP=$(mktemp -d /tmp/rex-test-host.XXXXXXXX)
 ENDPOINT="unix://$TEMP/rex.sock"
@@ -27,4 +30,4 @@ until "$REX" --server "$ENDPOINT" --autostart=false server status >/dev/null 2>&
   fi
   sleep 0.05
 done
-REX_SESSION='' REX_BLOCK='' REX_CONFIG="$TEMP/init.lua" "$REX" --server "$ENDPOINT" --autostart=false 'do' "$HERE/tests/run.lua"
+REX_SESSION='' REX_BLOCK='' REX_CONFIG="$TEMP/init.lua" "$REX" --server "$ENDPOINT" --autostart=false 'do' "$TARGET"

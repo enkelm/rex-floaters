@@ -69,7 +69,7 @@ local function chord(value)
   return table.concat(sequence, ">")
 end
 local function definition(value, name, base, defaults)
-  fields(value, { name=true, title=true, binding=true, bounds=true, collect=true, picker=true,
+  fields(value, { name=true, title=true, binding=true, bounds=true, zoom=true, collect=true, picker=true,
     execute=true, category=true, description=true, keywords=true }, "entry")
   name = value.name or name
   if type(name) ~= "string" or not name:match("^[a-z][a-z0-9_]*$") then
@@ -77,7 +77,11 @@ local function definition(value, name, base, defaults)
   end
   local entry = { name = name, directory = base, title = value.title == nil and name or text(value.title, "title"),
     bounds = bounds(value.bounds == nil and defaults or value.bounds), binding = false,
-    picker = { multiple = false, skip_single = true, backend = "fzf" } }
+    picker = { multiple = false, skip_single = true, backend = "fzf" }, zoom = false }
+  if value.zoom ~= nil then
+    if type(value.zoom) ~= "boolean" then reject("zoom must be a boolean") end
+    entry.zoom = value.zoom
+  end
   if value.binding ~= nil and value.binding ~= false then entry.binding = text(value.binding, "binding") end
   for _, key in ipairs({ "category", "description", "keywords" }) do
     if value[key] ~= nil then entry[key] = text(value[key], key) end

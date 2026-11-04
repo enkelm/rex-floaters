@@ -1,7 +1,7 @@
 -- Test infrastructure only. Run with Rex's embedded Lua; no Node or Lua packages.
 local H = {tests={}, failed=0, passed=0, skipped=0}
 local directory = debug.getinfo(1,"S").source:gsub("^@", ""):match("(.*/)")
-H.root = assert(rex.exec({"realpath", directory..".."})).stdout:gsub("%s+$", "")
+H.root = rex and assert(rex.exec({"realpath", directory..".."})).stdout:gsub("%s+$", "") or directory..".."
 function H.json(value) return assert(rex.json.encode(value)) end
 function H.decode(text) return assert(rex.json.decode(text)) end
 function H.quote(value) return "'"..tostring(value):gsub("'", "'\\''").."'" end
@@ -28,7 +28,10 @@ function H.equal(a,b,context)
     for k in pairs(y) do if x[k]==nil then return false end end
     return true
   end
-  assert(equal(a,b),(context or "Values differ")..": "..H.json(a).." != "..H.json(b))
+  if not equal(a,b) then
+    local format = rex and H.json or tostring
+    error((context or "Values differ")..": "..format(a).." != "..format(b), 0)
+  end
 end
 function H.rejects(fn,part) local ok,err=pcall(fn); assert(not ok,"Expected refusal"); H.contains(tostring(err),part) end
 function H.wait(fn,message,seconds)
@@ -118,11 +121,12 @@ esac
   function f:no_node() assert(not H.read(self.nodeLog),"A Lua workflow launched Node") end
   return f
 end
-function H.terminal(t,f,argv,cwd)
+function H.terminal(t,f,argv,cwd,options)
   local command={"python3",H.root.."/tests/terminal.py"}; for _,arg in ipairs(argv) do command[#command+1]=arg end
   local transcript=f.directory.."/pty-output"; H.write(transcript,"")
   local env={}; for k,v in pairs(f.env) do env[k]=v end
   env.REX_TEST_PTY_OUTPUT=transcript
+  for key,value in pairs(options or {}) do env["REX_TEST_"..key]=tostring(value) end
   env.FZF_DEFAULT_OPTS="--filter=no-such-choice --print-query"; env.FZF_DEFAULT_OPTS_FILE="/missing/fzf-options"
   local child=assert(rex.exec.start(command,{env=env,cwd=cwd or f.directory,stdin=true}))
   t:after(function() if child:running() then child:kill() end; assert(child:wait(10)) end)

@@ -22,9 +22,13 @@ def stop(*_):
     except ProcessLookupError:
         pass
 
-resize(40, 150)
-signal.signal(signal.SIGUSR1, lambda *_: resize(12, 48))
-signal.signal(signal.SIGUSR2, lambda *_: resize(40, 150))
+rows = int(os.environ.get('REX_TEST_ROWS', '40'))
+columns = int(os.environ.get('REX_TEST_COLUMNS', '150'))
+resize(rows, columns)
+signal.signal(signal.SIGUSR1, lambda *_: resize(
+    int(os.environ.get('REX_TEST_NARROW_ROWS', '12')),
+    int(os.environ.get('REX_TEST_NARROW_COLUMNS', '48'))))
+signal.signal(signal.SIGUSR2, lambda *_: resize(rows, columns))
 signal.signal(signal.SIGTERM, stop)
 inputs = [fd, 0]
 try:
@@ -48,4 +52,8 @@ try:
                 inputs.remove(0)
 finally:
     _, status = os.waitpid(pid, 0)
+    attrs = termios.tcgetattr(fd)
+    restored = bool(attrs[3] & termios.ICANON and attrs[3] & termios.ECHO)
+    with open(os.environ['REX_TEST_PTY_OUTPUT'], 'ab', buffering=0) as transcript:
+        transcript.write(('\nPTY_RESTORED=' + str(restored) + '\n').encode())
 os._exit(os.waitstatus_to_exitcode(status))

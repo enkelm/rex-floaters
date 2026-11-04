@@ -17,7 +17,7 @@ local extension = require("rex-floaters")
 assert(next(bindings) == nil and next(actions) == nil, "require must be inert")
 assert(require("rex-floaters") == extension)
 local options = { entries = {
-  { name = "monitor", title = "Monitor", binding = "cmd+b", execute = { "btop" } },
+  { name = "monitor", title = "Monitor", binding = "cmd+b", zoom = true, execute = { "btop" } },
   { name = "shell", binding = "cmd+s", execute = { "sh" } },
 } }
 assert(extension.setup(options) == extension)
@@ -37,6 +37,7 @@ for _, invalid in ipairs({ false, { bindings = false }, { entries = false }, { e
   { entries = { { name = "Invalid", execute = { "sh" } } } },
   { entries = { { name = "x", collect = "/missing.lua", execute = { "sh" } } } },
   { entries = { { name = "x", execute = {} } } },
+  { entries = { { name = "x", execute = { "sh" }, zoom = "yes" } } },
   { entries = { { name = "x", execute = { "sh", 42 } } } },
   { entries = { { name = "x", execute = { "sh" }, picker = { multiple = 1 } } } },
   { entries = { { name = "x", execute = { "sh" }, picker = { backend = "missing" } } } },

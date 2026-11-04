@@ -256,4 +256,9 @@ H.test("empty or malformed collections never execute; nonzero executor statuses 
 end)
 dofile(directory .. "discovery.lua")(H, "lazygit")
 dofile(directory .. "television.lua")(H)
+package.path = H.root .. "/floaters/?.lua;" .. package.path
+_G.H = H
+dofile(directory .. "pluck/tokens.lua")
+dofile(directory .. "pluck/window.lua")
+dofile(directory .. "pluck/integration.lua")
 H.finish()

@@ -29,9 +29,13 @@ local function run(name, ctx, close)
                 return checked(rex.call("block.close", { session_id = ctx.session_id, block_id = block.block_id }))
               end
               local state = layer.state == "minimized" and "normal" or "minimized"
-              return checked(rex.call("session.set_layer_state", {
+              local result = checked(rex.call("session.set_layer_state", {
                 session_id = ctx.session_id, layer_id = layer.layer_id, state = state, focus = state == "normal",
               }))
+              if state == "normal" and entry.zoom then
+                checked(rex.session.zoom_block{ block_id = block.block_id, zoom = true })
+              end
+              return result
             end
           end
         end
@@ -43,17 +47,26 @@ local function run(name, ctx, close)
       local launch_entry = {}
       for key, value in pairs(entry) do launch_entry[key] = value end
       launch_entry.origin = { session_id = ctx.session_id, window_id = window_id, block_id = ctx.block_id,
-        client_id = placement.block.owner or ctx.client_id }
+        client_id = placement.block.owner or ctx.client_id, zoomed_block_id = window.zoomed_block_id or "",
+        server_id = checked(rex.call("server.status")).instance_id }
       local args = checked(rex.json.encode({ entry = launch_entry, window = window_id,
         focus = window.focused_block_id or ctx.block_id, zoom = window.zoomed_block_id or "" }))
-      return checked(rex.session.new_layer{
-        window_id = window_id, bounds = entry.bounds, focus = true,
+      local created = checked(rex.session.new_layer{
+        window_id = window_id, bounds = entry.bounds, focus = not entry.zoom,
         layout = rex.layout.block{
           flavor = "com.superlogical.terminal.shell", label = "rex-floaters:" .. name,
           options = { command = { "/bin/sh", directory .. "launch.sh", args }, cwd = cwd,
             exit = { on_completion = true, quick_exit_threshold_ms = 0 } },
         },
       })
+      if entry.zoom then
+        local zoomed, err = rex.session.zoom_block{ block_id = created.block_ids[1], zoom = true }
+        if not zoomed then
+          rex.session.close_layer{ layer_id = created.layer_id }
+          error(err or "Cannot zoom the floater.", 0)
+        end
+      end
+      return created
     end
   end
   error("The invoking window closed before the floater opened.", 0)
