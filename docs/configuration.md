@@ -263,7 +263,8 @@ Each entry has one floater per Rex tab (called a `window` in the server API):
 
 1. The first toggle creates the floater, captures the working directory, and runs collection
    followed by execution.
-2. Toggling a visible floater hides it without stopping the picker or program.
+2. Toggling a visible floater hides it without stopping the picker or program. If it's the only
+   visible pane left in its tab, Rex can't hide it, so the toggle closes it instead.
 3. Toggling a hidden floater restores and focuses the same process. Collection doesn't run again.
 4. Completion, cancellation, or failure closes the terminal, even while hidden. Fast failures don't
    leave a dead shell or wait for acknowledgement.

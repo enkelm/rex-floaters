@@ -202,6 +202,22 @@ H.test("tiled labels and unrelated floating siblings survive owned executor exit
     end end
   end
 end)
+H.test("toggle closes a floater left as its tab's only visible pane", function(t)
+  local f = H.fixture(t, "lazygit")
+  configure(f, { entries = { { name = "last", execute = { "/bin/sh", "-c", "read -r answer" } } } })
+  local tab = f:json({ "window", "new", "-s", f.env.REX_SESSION, "Last", "--shell=none", "--json", "--", "/bin/sh", "-c", "read -r answer" })
+  local origin = tab.block_ids[1]
+  action(f, "last", origin)
+  local id = H.wait(function() return popup(f, "last") end, "No popup")
+  action(f, "last", id)
+  H.equal(select(2, popup(f, "last")).state, "minimized")
+  -- The tab's last tiled pane exits; Rex keeps the tab and shows the hidden floater.
+  f:call({ "send-key", "-s", f.env.REX_SESSION, "-b", origin, "enter" })
+  H.wait(function() return select(2, popup(f, "last")).state ~= "minimized" end, "Floater was not shown")
+  action(f, "last", id)
+  absent(f, "last")
+  for _, window in ipairs(f:view().windows) do assert(window.window_id ~= tab.window_id, "Tab stayed open") end
+end)
 H.test("native picker cancellation closes the actual popup and restores focus", function(t)
   local f = H.fixture(t, "lazygit")
   local origin = f:json({ "split", "-s", f.env.REX_SESSION, "-b", f.env.REX_BLOCK, "-c", f.workspace, "--shell=none", "--json", "--", "/bin/sh", "-c", "while :; do sleep 60; done" }).block_ids[1]

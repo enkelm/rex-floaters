@@ -7,6 +7,12 @@ local function checked(result, err)
   if result == nil then error(err or "Rex call failed.", 0) end
   return result
 end
+-- Rex refuses to minimize a window's last visible panes, e.g. after its layout's last pane exits.
+local function shows_other(window, layer)
+  for _, other in ipairs(window.layers or {}) do
+    if other ~= layer and other.state ~= "minimized" and #(other.blocks or {}) > 0 then return true end
+  end
+end
 local function run(name, ctx, close)
   local entry = entries[name]
   if not entry then error("rex-floaters: entry no longer configured: " .. name .. ". Reload Rex's config to remove its palette actions.", 0) end
@@ -25,7 +31,7 @@ local function run(name, ctx, close)
         if layer.kind == "floating" then
           for _, block in ipairs(layer.blocks or {}) do
             if block.label == "rex-floaters:" .. name and block.flavor == "com.superlogical.terminal.shell" then
-              if close then
+              if close or (layer.state ~= "minimized" and not shows_other(window, layer)) then
                 return checked(rex.call("block.close", { session_id = ctx.session_id, block_id = block.block_id }))
               end
               local state = layer.state == "minimized" and "normal" or "minimized"
