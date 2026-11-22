@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Close a floater on toggle when it's the only visible pane left in its tab, since Rex refuses to hide it.
 - Bundle Pluck on `cmd+shift+y` to copy hinted tokens from visible panes, using the normal floater lifecycle.
 - Group Pluck's capture and token code under `collect/`, and its UI and clipboard code under `executor/`; keep `execute.lua` as the entry point.
 - Speed up fresh Pluck launches without caching: walk tokens alongside screen cells, handle ASCII
